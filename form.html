@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Location Logger</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">ระบบบันทึกข้อมูลการลงพื้นที่</h1>
+        <p class="text-center">บันทึกข้อมูล</p>
+        <button class="btn btn-primary" onclick="getLocation()">กดเพื่อบันทึกข้อมูล</button>
+    </div>
+
+    <script>
+        function getLocation() {
+            liff.init({ liffId: "##################" }, () => {
+                if (liff.isLoggedIn()) {
+                    liff.getProfile().then(profile => {
+                        var userId = profile.userId;
+                        var displayName = profile.displayName;
+
+                        // Use navigator.geolocation to get the device's current location
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(position => {
+                                var latitude = position.coords.latitude;
+                                var longitude = position.coords.longitude;
+
+                                fetch('save_location.php', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: `user_id=${userId}&display_name=${displayName}&latitude=${latitude}&longitude=${longitude}`
+                                })
+                                .then(response => response.text())
+                                .then(data => {
+                                    console.log(data);
+                                    Swal.fire({
+                                        title: 'Saved!',
+                                        text: 'Your location has been saved.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    }).then(() => {
+                                        liff.closeWindow(); // ปิดหน้าต่าง LIFF
+                                    });
+                                })
+                                .catch(error => {
+                                    console.error('Error saving location:', error);
+                                    Swal.fire('Error', 'Failed to save location', 'error');
+                                });
+                            }, error => {
+                                console.error('Error getting geolocation:', error);
+                                Swal.fire('Error', 'Failed to get location', 'error');
+                            });
+                        } else {
+                            Swal.fire('Error', 'Geolocation is not supported by this browser', 'error');
+                        }
+                    }).catch(error => {
+                        console.error('Error getting profile:', error);
+                        Swal.fire('Error', 'Failed to get profile', 'error');
+                    });
+                } else {
+                    liff.login();
+                }
+            }, err => {
+                console.error('LIFF Initialization failed:', err);
+                Swal.fire('Error', 'Failed to initialize LIFF', 'error');
+            });
+        }
+    </script>
+</body>
+</html>
